@@ -98,9 +98,9 @@ var initializePhysics = function (scene) {
     scene.enablePhysics(new BABYLON.Vector3(0, -10, 0), plugin);
 
     if (useV2) {
-        groundPhysicsMaterial = {friction: 0.2, restitution: 0.3};
+        groundPhysicsMaterial = {friction: 0.7, restitution: 0.1};
 
-        var objPhyMat = {friction: 0.2, restitution: 0.3};
+        var objPhyMat = {friction: 0.7, restitution: 0.1};
 
         boxesPhysicShape = new BABYLON.PhysicsShapeBox(new BABYLON.Vector3(0, 0, 0), BABYLON.Quaternion.Identity(), new BABYLON.Vector3(size, size, size), scene);
         boxesPhysicShape.material = (objPhyMat);
@@ -240,7 +240,7 @@ var createScene = function () {
 
         switch (worldType) {
             case "box":
-                createGround({
+                createHeightmap({
                     scene,
                     material: groundPhysicsMaterial
                 });
