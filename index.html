@@ -200,7 +200,7 @@ var createScene = function () {
         c.text = `physics time: ${pt.toFixed(2)} ms`;
     });
 
-    addOptions(panel, "Initial World", worldType, ["box", "heightmap"], (value) => {
+    addOptions(panel, "Initial World", worldType, ["heightmap", "box"], (value) => {
         worldType = value;
     });
 
@@ -240,7 +240,7 @@ var createScene = function () {
 
         switch (worldType) {
             case "box":
-                createHeightmap({
+                createGround({
                     scene,
                     material: groundPhysicsMaterial
                 });
