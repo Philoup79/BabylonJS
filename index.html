@@ -3,7 +3,7 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
-        <title>Babylon.js sample code</title>
+        <title>Virtual Real Time land-slide Simulator using Babylon.js with havok extension</title>
 
         <!-- Babylon.js -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
@@ -48,24 +48,25 @@
     </head>
     <body>
         <div id="canvasZone"><canvas id="renderCanvas"></canvas></div>
-        <script>
-                    var canvas = document.getElementById("renderCanvas");
+        <script>		
+		
+var canvas = document.getElementById("renderCanvas");
 
-                    var startRenderLoop = function (engine, canvas) {
-                        engine.runRenderLoop(function () {
-                            if (sceneToRender && sceneToRender.activeCamera) {
-                                sceneToRender.render();
-                            }
-                        });
-                    }
+var startRenderLoop = function (engine, canvas) {
+	engine.runRenderLoop(function () {
+		if (sceneToRender && sceneToRender.activeCamera) {
+			sceneToRender.render();
+		}
+	});
+}
 
-                    var engine = null;
-        var scene = null;
-        var sceneToRender = null;
-        var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
-        let worldType = "box";
+var engine = null;
+var scene = null;
+var sceneToRender = null;
+var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
+let worldType = "heightmap";
 let objectType = "box";
-let useV2 = true;
+//let useV2 = true;
 let disablePreStep = true;
 const bodiesToDispose = [];
 const shapesToDispose = [];
@@ -76,9 +77,9 @@ let baseBoxShape, baseSphereShape, baseConvexShape;
 // Common physic material for non aggregate case
 let groundPhysicsMaterial, boxesPhysicShape, spherePhysicsShape, convexPhysicsShape;
 
-const size = 2;
-const padding = 1;
-const numSide = 10;
+const size = 2; // size of objects
+const padding = 1; // spacing between objects
+const numSide = 10; // number of objects³
 
 const groundSize = 200;
 
@@ -94,28 +95,28 @@ var initializePhysics = function (scene) {
         scene.disablePhysicsEngine();
         plugin = null;
     }
-    plugin = useV2 ? new BABYLON.HavokPlugin() : new BABYLON.AmmoJSPlugin();
-    scene.enablePhysics(new BABYLON.Vector3(0, -10, 0), plugin);
+    plugin = new BABYLON.HavokPlugin();
+    scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), plugin);
 
-    if (useV2) {
-        groundPhysicsMaterial = {friction: 0.7, restitution: 0.1};
+    groundPhysicsMaterial = {friction: 0.7, restitution: 0.1};
 
-        var objPhyMat = {friction: 0.7, restitution: 0.1};
+    var boxPhyMat = {friction: 0.7, restitution: 0.1};
+    var sphPhyMat = {friction: 0.1, restitution: 0.7};
+    var objPhyMat = {friction: 0.7, restitution: 0.1};
 
-        boxesPhysicShape = new BABYLON.PhysicsShapeBox(new BABYLON.Vector3(0, 0, 0), BABYLON.Quaternion.Identity(), new BABYLON.Vector3(size, size, size), scene);
-        boxesPhysicShape.material = (objPhyMat);
+    boxesPhysicShape = new BABYLON.PhysicsShapeBox(new BABYLON.Vector3(0, 0, 0), BABYLON.Quaternion.Identity(), new BABYLON.Vector3(size, size, size), scene);
+    boxesPhysicShape.material = (boxPhyMat);
 
-        spherePhysicsShape = new BABYLON.PhysicsShapeSphere(new BABYLON.Vector3(0, 0, 0), size/2, scene);
-        spherePhysicsShape.material = (objPhyMat);
+    spherePhysicsShape = new BABYLON.PhysicsShapeSphere(new BABYLON.Vector3(0, 0, 0), size/2, scene);
+    spherePhysicsShape.material = (sphPhyMat);
 
-        if (useConvexShapes) {
-            convexPhysicsShape = new BABYLON.PhysicsShapeConvexHull(baseConvexShape, scene);
-            convexPhysicsShape.material = (objPhyMat);
-        }
-        if (useMeshShapes) {
-            convexPhysicsShape = new BABYLON.PhysicsShapeMesh(baseConvexShape, scene);
-            convexPhysicsShape.material = (objPhyMat);
-        }
+    if (useConvexShapes) {
+        convexPhysicsShape = new BABYLON.PhysicsShapeConvexHull(baseConvexShape, scene);
+        convexPhysicsShape.material = (objPhyMat);
+    }
+    if (useMeshShapes) {
+        convexPhysicsShape = new BABYLON.PhysicsShapeMesh(baseConvexShape, scene);
+        convexPhysicsShape.material = (objPhyMat);
     }
 };
 
@@ -173,15 +174,11 @@ var createScene = function () {
     panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
     ui.addControl(panel);
 
-    const engineText = addText(scene, panel, null, `using engine: ${useV2 ? 'havok' : 'ammo'}`);
+//    const engineText = addText(scene, panel, null, `using engine: ${useV2 ? 'havok' : 'ammo'}`);
 
     const bodiesText = addText(scene, panel, (bodiesCounter) => {
-        if (useV2) {
-            const n = plugin.numBodies;
-            bodiesCounter.text = `bodies: ${n}`;
-        } else {
-            bodiesCounter.text = "bodies: N/A";
-        }
+        const n = plugin.numBodies;
+        bodiesCounter.text = `bodies: ${n}`;
     });
 
     const objectsText = addText(scene, panel, null, `num objects: ${numSide * numSide * numSide * 2 + numConvexShapes * numConvexShapes * numConvexShapes}`);
@@ -199,7 +196,7 @@ var createScene = function () {
         const pt = sceneInstrumentation.physicsTimeCounter.lastSecAverage;
         c.text = `physics time: ${pt.toFixed(2)} ms`;
     });
-
+/*
     addOptions(panel, "Initial World", worldType, ["heightmap", "box"], (value) => {
         worldType = value;
     });
@@ -213,18 +210,16 @@ var createScene = function () {
         initializePhysics(scene);
         createWorld();
     });
-
+*/
     var checkbox = new BABYLON.GUI.Checkbox();
     checkbox.width = "20px";
     checkbox.height = "20px";
     checkbox.isChecked = false;
     checkbox.color = "white";
     checkbox.onIsCheckedChangedObservable.add(function(value) {
-        if (useV2) {
-            scene.getPhysicsEngine().getBodies().forEach(element => {
-                element.disablePreStep = !value;
-            });
-        }
+        scene.getPhysicsEngine().getBodies().forEach(element => {
+            element.disablePreStep = !value;
+        });
     });
 
     const selector = BABYLON.GUI.Control.AddHeader(checkbox, "Body pre-step Transform update", "300px");
@@ -235,32 +230,19 @@ var createScene = function () {
     panel.addControl(selector);
     panel.addControl(checkbox);    
 
-    // Boxes
     function createWorld() {
 
-        switch (worldType) {
-            case "box":
-                createGround({
-                    scene,
-                    material: groundPhysicsMaterial
-                });
-                break;
-            case "heightmap":
-                createHeightmap({
-                    scene,
-                    material: groundPhysicsMaterial
-                });
-                break;
-        }
+        createHeightmap({ scene, material: groundPhysicsMaterial });
 
-        const startingPosition = new BABYLON.Vector3(0, 100, 0);
+        const startingPosition = new BABYLON.Vector3(-14, 100, 53); // dropsite 100 units? above ground
 
         createShapes({
             scene,
             size,
             padding,
-            numPerSide: numSide,
-            startingPosition,
+            numPerSide: 5,//numSide,
+            startingPosition: new BABYLON.Vector3(-14, 60, 35),
+            //startingPosition,
             baseShape: boxesPhysicShape,
             baseMesh: baseBoxShape,
             baseImpostorType: BABYLON.PhysicsImpostor.BoxImpostor,
@@ -270,8 +252,9 @@ var createScene = function () {
             scene,
             size,
             padding,
-            numPerSide: numSide,
-            startingPosition: startingPosition.add(new BABYLON.Vector3(0, numSide * (size + padding) + size/2, 0)),
+            numPerSide: 17,//numSide,
+            startingPosition: new BABYLON.Vector3(0, 150, 75),
+            //startingPosition: startingPosition.add(new BABYLON.Vector3(0, numSide * (size + padding) + size/2, 0)),
             baseShape: spherePhysicsShape,
             baseMesh: baseSphereShape,
             baseImpostorType: BABYLON.PhysicsImpostor.SphereImpostor,
@@ -290,8 +273,8 @@ var createScene = function () {
             });
         }
     }
+    
     createWorld();
-
 
     function restartScene() {
         console.log('restart scene');
@@ -343,43 +326,13 @@ var createScene = function () {
     });
 
     return scene;
-
 };
 
-function createGround({ scene, material }) {
-    // Ground
-    var ground = BABYLON.MeshBuilder.CreateGround("ground1", {width: groundSize, height: groundSize});
-    ground.material = new BABYLON.StandardMaterial("groundMaterial", scene);
-    ground.material.diffuseColor = new BABYLON.Color4(0.3,0.3,0.3,1.0);
-    meshesToDispose.push(ground);
-    if (useV2) {
-        const shape = new BABYLON.PhysicsShapeBox(
-            new BABYLON.Vector3(0, 0, 0),
-            BABYLON.Quaternion.Identity(),
-            new BABYLON.Vector3(groundSize, 0.001, groundSize),
-            scene);
-        shapesToDispose.push(shape);
-        const body = new BABYLON.PhysicsBody(ground, BABYLON.PhysicsMotionType.STATIC, false, scene);
-        bodiesToDispose.push(body);
-        shape.material = (material);
-        body.shape = (shape);
-        body.setMassProperties ({
-            mass: 0,
-        });
-
-    } else {
-        ground.physicsImpostor = new BABYLON.PhysicsImpostor(ground, BABYLON.PhysicsImpostor.BoxImpostor, { mass: 0, restitution: 1 }, scene);
-        impostorsToDispose.push(ground.physicsImpostor);
-    }
-}
-
-function createHeightmap({
-    scene,
-    material }) {
+function createHeightmap({ scene, material }) {
     console.log('create heightmap');
     var ground = BABYLON.MeshBuilder.CreateGroundFromHeightMap(
         "ground",
-        "38_298_71_377_13_512_512.png",
+        "38_676_69_774_13_256_256_dem.png",
         {
             width: groundSize,
             height: groundSize,
@@ -389,25 +342,20 @@ function createHeightmap({
                 meshesToDispose.push(mesh);
                 mesh.material = new BABYLON.StandardMaterial("heightmapMaterial");
                 matsToDispose.push(mesh.material);
-                mesh.material.emissiveColor = BABYLON.Color3.Green();
-                mesh.material.wireframe = true;
-                if (useV2) {
-
-                    var groundShape = new BABYLON.PhysicsShapeMesh(ground, scene);
-                    shapesToDispose.push(groundShape);
-
-                    const body = new BABYLON.PhysicsBody(ground, BABYLON.PhysicsMotionType.STATIC, false, scene);
-                    bodiesToDispose.push(body);
-                    groundShape.material = (material);
-                    body.shape = (groundShape);
-                    body.setMassProperties ({
-                        mass: 0,
-                    });
-                    console.log('finish creating heightmap');
-
-                } else {
-                    ground.physicsImpostor = new BABYLON.PhysicsImpostor(ground, BABYLON.PhysicsImpostor.MeshImpostor, { mass: 0, restitution: 1 }, scene);
-                }
+                //mesh.material.emissiveColor = BABYLON.Color3.Red();
+                //mesh.material.emissiveColor = new BABYLON.Color3(0.8,0.3,0.1);
+                mesh.material.diffuseTexture = new BABYLON.Texture("38_676_69_774_13_256_256_img.png", scene);;
+                mesh.material.wireframe = false;
+                var groundShape = new BABYLON.PhysicsShapeMesh(ground, scene);
+                shapesToDispose.push(groundShape);
+                const body = new BABYLON.PhysicsBody(ground, BABYLON.PhysicsMotionType.STATIC, false, scene);
+                bodiesToDispose.push(body);
+                groundShape.material = (material);
+                body.shape = (groundShape);
+                body.setMassProperties ({
+                    mass: 0,
+                });
+                console.log('finish creating heightmap');
             },
         },
         scene
@@ -444,18 +392,9 @@ function createShapes({
                 position.z = (z - numPerSide/2) * (size + padding);
                 position.addInPlace(startingPosition);
 
-                if (useV2) {
-                    matrix.setTranslation(position);
-                    matrix.copyToArray(matricesData, index * 16);
-                } else {
-                    const boxName = "instance: " + index;
-                    const box = baseMesh.createInstance(boxName);
-                    box.position = position.clone();
-                    box.physicsImpostor = new BABYLON.PhysicsImpostor(box, baseImpostorType, baseImpostorParams, scene);
-                    meshesToDispose.push(box);
-                    impostorsToDispose.push(box.physicsImpostor);
-                    box.alwaysSelectAsActiveMesh = true;
-                }
+                matrix.setTranslation(position);
+                matrix.copyToArray(matricesData, index * 16);
+                // randomized color
                 colorsData[index * 4] = Math.random();
                 colorsData[index * 4 + 1] = Math.random();
                 colorsData[index * 4 + 2] = Math.random();
@@ -464,22 +403,16 @@ function createShapes({
             }
         }
     }
-    if (useV2) {
-        baseMesh.isVisible = true;
-        baseMesh.alwaysSelectAsActiveMesh = true;
-        baseMesh.thinInstanceSetBuffer("matrix", matricesData, 16, false);
-        baseMesh.thinInstanceSetBuffer("color", colorsData, 4);
-        
-        const body = new BABYLON.PhysicsBody(baseMesh, BABYLON.PhysicsMotionType.DYNAMIC, false, scene);
-        body.disablePreStep = disablePreStep;
-        body.shape = (baseShape);
-        body.setMassProperties({mass: size});
-        bodiesToDispose.push(body);
-    } else {
-        const buffer = new BABYLON.VertexBuffer(scene.getEngine(), colorsData, BABYLON.VertexBuffer.ColorKind, false, false, 4, true);
-        baseMesh.setVerticesBuffer(buffer);
-        baseMesh.alwaysSelectAsActiveMesh = true;
-    }
+    baseMesh.isVisible = true;
+    baseMesh.alwaysSelectAsActiveMesh = true;
+    baseMesh.thinInstanceSetBuffer("matrix", matricesData, 16, false);
+    baseMesh.thinInstanceSetBuffer("color", colorsData, 4);
+    
+    const body = new BABYLON.PhysicsBody(baseMesh, BABYLON.PhysicsMotionType.DYNAMIC, false, scene);
+    body.disablePreStep = disablePreStep;
+    body.shape = (baseShape);
+    body.setMassProperties({mass: size});
+    bodiesToDispose.push(body);
 
     meshesToDispose.push(baseMesh);
 }
@@ -552,35 +485,37 @@ function addText(scene, parent, updateFn, initialText) {
     }
     return bodiesCounter;
 }
-                window.initFunction = async function() {
-                    await Ammo();
-                    globalThis.HK = await HavokPhysics();
-                    
-                    var asyncEngineCreation = async function() {
-                        try {
-                        return createDefaultEngine();
-                        } catch(e) {
-                        console.log("the available createEngine function failed. Creating the default engine instead");
-                        return createDefaultEngine();
-                        }
-                    }
 
-                    window.engine = await asyncEngineCreation();
-                    
-                    const engineOptions = window.engine.getCreationOptions?.();
-                    if (!engineOptions || engineOptions.audioEngine !== false) {
-                        
-                    }
-        if (!engine) throw 'engine should not be null.';
-        startRenderLoop(engine, canvas);
-        window.scene = createScene();};
-        initFunction().then(() => {sceneToRender = scene
-                    });
+window.initFunction = async function() {
+    await Ammo();
+    globalThis.HK = await HavokPhysics();
+    
+    var asyncEngineCreation = async function() {
+        try {
+        return createDefaultEngine();
+        } catch(e) {
+        console.log("the available createEngine function failed. Creating the default engine instead");
+        return createDefaultEngine();
+        }
+    }
 
-                    // Resize
-                    window.addEventListener("resize", function () {
-                        engine.resize();
-                    });
+    window.engine = await asyncEngineCreation();
+    
+    const engineOptions = window.engine.getCreationOptions?.();
+
+    if (!engineOptions || engineOptions.audioEngine !== false) {}
+
+    if (!engine) throw 'engine should not be null.';
+
+    startRenderLoop(engine, canvas);
+    window.scene = createScene();
+};
+
+initFunction().then(() => {sceneToRender = scene});
+
+// Resize
+window.addEventListener("resize", function () { engine.resize(); });
+                					
         </script>
     </body>
 </html>
