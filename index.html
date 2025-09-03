@@ -85,7 +85,7 @@ const groundSize = 200;
 
 let numConvexShapes = 2;
 
-let useConvexShapes = true;
+let useConvexShapes = false;
 let useMeshShapes = false;
 
 let plugin;
@@ -98,7 +98,7 @@ var initializePhysics = function (scene) {
     plugin = new BABYLON.HavokPlugin();
     scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), plugin);
 
-    groundPhysicsMaterial = {friction: 0.7, restitution: 0.1};
+    groundPhysicsMaterial = {friction: 0.7, restitution: 0.0};
 
     var boxPhyMat = {friction: 0.7, restitution: 0.1};
     var sphPhyMat = {friction: 0.1, restitution: 0.7};
@@ -125,24 +125,44 @@ var createBaseShapesAndMats = function (scene) {
     matsToDispose.push(objectsMaterial);
 
     baseBoxShape = BABYLON.MeshBuilder.CreateBox("baseBox", { width: size, height: size, depth: size }, scene);
+    baseBoxShape.material = new BABYLON.StandardMaterial("BoxObjectsMaterial", scene);
+//    baseBoxShape.material = objectsMaterial;
+//    baseBoxShape.material.disableLightning = false;
+    baseBoxShape.material.alpha = 1.0;
+//    baseBoxShape.isVisible = false;
+    matsToDispose.push(baseBoxShape.material);
+
     baseSphereShape = BABYLON.MeshBuilder.CreateSphere("baseSphere", { diameter: size }, scene);
+    baseSphereShape.material = new BABYLON.StandardMaterial("SphereObjectsMaterial", scene);
+//    baseSphereShape.material = objectsMaterial;
+//    baseSphereShape.material.disableLightning = false;
+    baseSphereShape.material.alpha = 0.25;
+//    baseSphereShape.isVisible = false;
+    matsToDispose.push(baseSphereShape.material);
+
     if (useConvexShapes || useMeshShapes) {
         baseConvexShape = BABYLON.MeshBuilder.CreateTorusKnot("baseConvex", { radius: size, tube: size / 4 });
+//        baseConvexShape.material = objectsMaterial;
+//        baseConvexShape.material.disableLightning = false;
+//        baseConvexShape.material.alpha = 1.0;
+//        baseConvexShape.isVisible = false;
     }
 
-    const baseShapes = [
-        baseBoxShape,
-        baseSphereShape,
-    ];
+    const baseShapes = [ baseBoxShape, baseSphereShape ];
+
     if (useConvexShapes || useMeshShapes) {
         baseShapes.push(baseConvexShape);
     }
+/*
     for (const base of baseShapes) {
 
         base.material = objectsMaterial;
         base.material.disableLightning = false;
+        //base.material.alpha = 0.25; // transparency for all shapes
         base.isVisible = false;
     }
+*/
+    //baseShapes[1].material.alpha = 0.7; // sphere transparency
 };
 
 var createScene = function () {
@@ -153,6 +173,25 @@ var createScene = function () {
     createBaseShapesAndMats(scene);
 
     initializePhysics(scene);
+
+   
+    // Skybox
+	//var light = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(-1, 1, 0), scene);
+	//light.diffuse = new BABYLON.Color3(0, 0, 1);
+
+	var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {size:10000.0}, scene);
+	var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+	skyboxMaterial.backFaceCulling = false;
+	skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("puresky.env", scene);
+    //skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("textures/TropicalSunnyDay", scene);
+	skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+	skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+	skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+	skybox.material = skyboxMaterial;			
+	    
+
+    scene.clearColor = new BABYLON.Color3(0.6, 0.6, 0.6);
+
 
     // Camera
     var camera = new BABYLON.ArcRotateCamera("cam", 0, 0.8, 200, new BABYLON.Vector3(0, 0, 0));
@@ -168,13 +207,31 @@ var createScene = function () {
     });
 
     const panel = new BABYLON.GUI.StackPanel("control-panel");
-    panel.width = "300px";
+    panel.width = "200px";
     panel.adaptHeightToChildren = true;
-    panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-    panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
     ui.addControl(panel);
 
+    // framerate and frame timer
+    const sceneInstrumentation = new BABYLON.SceneInstrumentation(scene);
+    sceneInstrumentation.captureFrameTime = true;
+    sceneInstrumentation.capturePhysicsTime = true;
+
+    addText(scene, panel, (c) => {
+        const ft = sceneInstrumentation.frameTimeCounter.lastSecAverage;
+        c.text = `abs. fps: ${(1000 / ft).toFixed(2)}`;
+    });
+
+    addText(scene, panel, (c) => {
+        const pt = sceneInstrumentation.physicsTimeCounter.lastSecAverage;
+        c.text = `time: ${pt.toFixed(2)} ms`;
+    });
+
+
+/*
 //    const engineText = addText(scene, panel, null, `using engine: ${useV2 ? 'havok' : 'ammo'}`);
+    const engineText = addText(scene, panel, null, `simulate dam breach:`);
 
     const bodiesText = addText(scene, panel, (bodiesCounter) => {
         const n = plugin.numBodies;
@@ -196,7 +253,7 @@ var createScene = function () {
         const pt = sceneInstrumentation.physicsTimeCounter.lastSecAverage;
         c.text = `physics time: ${pt.toFixed(2)} ms`;
     });
-/*
+
     addOptions(panel, "Initial World", worldType, ["heightmap", "box"], (value) => {
         worldType = value;
     });
@@ -210,7 +267,7 @@ var createScene = function () {
         initializePhysics(scene);
         createWorld();
     });
-*/
+
     var checkbox = new BABYLON.GUI.Checkbox();
     checkbox.width = "20px";
     checkbox.height = "20px";
@@ -229,6 +286,7 @@ var createScene = function () {
     selector.color = "white";
     panel.addControl(selector);
     panel.addControl(checkbox);    
+*/
 
     function createWorld() {
 
@@ -246,20 +304,22 @@ var createScene = function () {
             baseShape: boxesPhysicShape,
             baseMesh: baseBoxShape,
             baseImpostorType: BABYLON.PhysicsImpostor.BoxImpostor,
+            baseColor: new BABYLON.Color4(0.63529,0.57647,0.49019,1.0),
         });
 
         createShapes({
             scene,
-            size,
+            size: 1,
             padding,
-            numPerSide: 17,//numSide,
+            numPerSide: 19,//numSide,
             startingPosition: new BABYLON.Vector3(0, 150, 75),
             //startingPosition: startingPosition.add(new BABYLON.Vector3(0, numSide * (size + padding) + size/2, 0)),
             baseShape: spherePhysicsShape,
             baseMesh: baseSphereShape,
             baseImpostorType: BABYLON.PhysicsImpostor.SphereImpostor,
+            baseColor: new BABYLON.Color4(0.1,0.7,0.9,1.0),
         });
-
+/*
         if (useConvexShapes || useMeshShapes) {
             createShapes({
                 scene,
@@ -272,6 +332,7 @@ var createScene = function () {
                 baseImpostorType: useConvexShapes ? BABYLON.PhysicsImpostor.ConvexHullImpostor : BABYLON.PhysicsImpostor.MeshImpostor,
             });
         }
+*/
     }
     
     createWorld();
@@ -319,7 +380,15 @@ var createScene = function () {
         console.log('disposed', numDisposed, 'materials');
     }
 
-    addButton(panel, "Restart scene", () => {
+    addButton(panel, "add Yeti", () => {
+        BABYLON.ImportMeshAsync(Assets.meshes.Yeti.rootUrl + Assets.meshes.Yeti.filename, scene).then(function({meshes}){
+            meshes[0].scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+            meshes[0].position = new BABYLON.Vector3(-90, 88, 0);
+            meshes[0].rotation = new BABYLON.Vector3(0, 1.57, 0); //alpha, beta, gamma in radians
+        });
+    });
+
+    addButton(panel, "rebuild dam", () => {
         restartScene();
         createBaseShapesAndMats(scene);
         createWorld();
@@ -344,17 +413,21 @@ function createHeightmap({ scene, material }) {
                 matsToDispose.push(mesh.material);
                 //mesh.material.emissiveColor = BABYLON.Color3.Red();
                 //mesh.material.emissiveColor = new BABYLON.Color3(0.8,0.3,0.1);
-                mesh.material.diffuseTexture = new BABYLON.Texture("38_676_69_774_13_256_256_img.png", scene);;
+                //mesh.material.diffuseTexture = new BABYLON.Texture("38_676_69_774_13_256_256_img.png", scene);
+                mesh.material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+                mesh.material.diffuseTexture = new BABYLON.Texture("1024x1024_img.png", scene);
                 mesh.material.wireframe = false;
                 var groundShape = new BABYLON.PhysicsShapeMesh(ground, scene);
                 shapesToDispose.push(groundShape);
-                const body = new BABYLON.PhysicsBody(ground, BABYLON.PhysicsMotionType.STATIC, false, scene);
+                //const body = new BABYLON.PhysicsBody(ground, BABYLON.PhysicsMotionType.STATIC, false, scene);
+                const body = new BABYLON.PhysicsBody(ground, BABYLON.PhysicsMotionType.ANIMATED, false, scene);
                 bodiesToDispose.push(body);
                 groundShape.material = (material);
                 body.shape = (groundShape);
                 body.setMassProperties ({
                     mass: 0,
                 });
+                //body.transformNode.translate(-Vector3.Up(), 0, Space.WORLD);
                 console.log('finish creating heightmap');
             },
         },
@@ -371,7 +444,8 @@ function createShapes({
     startingPosition,
     baseShape,
     baseMesh,
-    baseImpostorType }) {
+    baseImpostorType,
+    baseColor }) {
 
     let index = 0;
     const baseImpostorParams = { mass: size, restitution: 0, friction: 1 };
@@ -395,10 +469,20 @@ function createShapes({
                 matrix.setTranslation(position);
                 matrix.copyToArray(matricesData, index * 16);
                 // randomized color
-                colorsData[index * 4] = Math.random();
-                colorsData[index * 4 + 1] = Math.random();
-                colorsData[index * 4 + 2] = Math.random();
-                colorsData[index * 4 + 3] = 1.0;
+                //colorsData[index * 4] = Math.random();
+                //colorsData[index * 4 + 1] = Math.random();
+                //colorsData[index * 4 + 2] = Math.random();
+                //colorsData[index * 4 + 3] = 1.0;
+                // fixed color transparent blue for water
+                //colorsData[index * 4] = 0.1;
+                //colorsData[index * 4 + 1] = 0.7;
+                //colorsData[index * 4 + 2] = 0.9;
+                //colorsData[index * 4 + 3] = 1.0;
+                // external color parameter
+                colorsData[index * 4] = baseColor.r;
+                colorsData[index * 4 + 1] = baseColor.g;
+                colorsData[index * 4 + 2] = baseColor.b;
+                colorsData[index * 4 + 3] = baseColor.a;
                 index++;
             }
         }
@@ -421,7 +505,7 @@ function addButton(parent, text, fn) {
     var btn = BABYLON.GUI.Button.CreateSimpleButton("btn", text);
     btn.width = "100%";
     btn.height = "40px";
-    btn.background = "green";
+    btn.background = "gray";
     btn.color = "white";
     btn.onPointerClickObservable.add(fn);
     parent.addControl(btn);
